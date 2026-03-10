@@ -8,6 +8,17 @@ const CHAT_STATES = {
 };
 
 let currentState = CHAT_STATES.INIT;
+let idleTimer = null;
+let sessionCloseTimer = null; // 20-minute auto-close timer
+const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
+const AUTO_CLOSE_MS = 20 * 60 * 1000; // 20 minutes
+
+// Request Notification Permission on load
+document.addEventListener('DOMContentLoaded', () => {
+    if ("Notification" in window && Notification.permission !== "granted" && Notification.permission !== "denied") {
+        Notification.requestPermission();
+    }
+});
 
 // DOM Elements
 const startBtn = document.getElementById('start-tutor-btn');
@@ -19,6 +30,11 @@ const notImplementedMsg = document.getElementById('not-implemented-msg');
 const chatInput = document.getElementById('chat-input');
 const sendBtn = document.getElementById('send-btn');
 const micBtn = document.getElementById('mic-btn');
+
+// Chat Menu Elements
+const chatMenuBtn = document.getElementById('chat-menu-btn');
+const chatAttachMenu = document.getElementById('chat-attach-menu');
+const photoUpload = document.getElementById('photo-upload');
 
 // Mode Buttons
 const modeCoachBtn = document.getElementById('mode-coach');
@@ -75,8 +91,10 @@ function addBotMessage(text, options = null, correction = null, saveHistory = tr
         if (correction) {
             extraHTML += `
                 <div class="grammar-correction">
-                    <div class="original">Instead of: ${correction.original}</div>
-                    <div class="corrected">Say: ${correction.fixed}</div>
+                    <span class="grammar-correction-title">💡 Grammar Check</span>
+                    <div class="original">Instead of <del>${correction.wrongWord}</del>, Say: <b>${correction.rightWord}</b>.</div>
+                    <div class="corrected">(${correction.fullSentence})</div>
+                    ${correction.reason ? `<div class="grammar-reason"><b>이유:</b> ${correction.reason}</div>` : ''}
                 </div>
             `;
         }
@@ -129,6 +147,85 @@ function scrollToBottom() {
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
+// Helper: Handle Idle Timeout & Auto Close
+function resetTimers() {
+    if (idleTimer) clearTimeout(idleTimer);
+    if (sessionCloseTimer) clearTimeout(sessionCloseTimer);
+
+    // Only set timer if we are actively in a roleplay session
+    if (currentState === CHAT_STATES.ROLEPLAY_TEXT || currentState === CHAT_STATES.ROLEPLAY_VOICE) {
+        
+        // 5-minute notification
+        idleTimer = setTimeout(() => {
+            const warningMsg = "What are you doing? Please reply.";
+            addBotMessage(warningMsg, null, null, true);
+
+            // Trigger Browser Push Notification
+            if ("Notification" in window && Notification.permission === "granted") {
+                new Notification("AI Tutor Message", {
+                    body: warningMsg,
+                    icon: "https://cdn-icons-png.flaticon.com/512/4712/4712010.png"
+                });
+            } else if ("Notification" in window && Notification.permission !== "denied") {
+                Notification.requestPermission().then(permission => {
+                    if (permission === "granted") {
+                        new Notification("AI Tutor Message", {
+                            body: warningMsg,
+                            icon: "https://cdn-icons-png.flaticon.com/512/4712/4712010.png"
+                        });
+                    }
+                });
+            }
+        }, IDLE_TIMEOUT_MS);
+
+        // 20-minute auto close
+        sessionCloseTimer = setTimeout(() => {
+            endSession();
+        }, AUTO_CLOSE_MS);
+    }
+}
+
+// Helper: End Session and Show Summary
+function endSession() {
+    if (idleTimer) clearTimeout(idleTimer);
+    if (sessionCloseTimer) clearTimeout(sessionCloseTimer);
+    
+    // Hide chat modal
+    modal.classList.add('hidden');
+    
+    // Show Summary Modal
+    const summaryModal = document.getElementById('summary-modal');
+    const summaryCard = document.getElementById('summary-card');
+    const mistakesList = document.getElementById('summary-mistakes-list');
+    const vocabList = document.getElementById('summary-vocab-list');
+    
+    // Mock Data
+    const mockMistakes = [
+        "Confusing 'a' and 'the' (관사 오용)",
+        "Missing plural 's' (복수형 누락)",
+        "Tense mismatch (시제 불일치)"
+    ];
+    const mockVocab = [
+        "Can I get a...",
+        "I'm on my way to..."
+    ];
+    
+    mistakesList.innerHTML = mockMistakes.map(m => `<li>${m}</li>`).join('');
+    vocabList.innerHTML = mockVocab.map(v => `<li>${v}</li>`).join('');
+    
+    summaryModal.classList.remove('hidden');
+    // Animate in
+    setTimeout(() => {
+        summaryCard.classList.remove('scale-95', 'opacity-0');
+        summaryCard.classList.add('scale-100', 'opacity-100');
+    }, 10);
+    
+    // Optional: Add event listener to restart button
+    document.getElementById('restart-btn').onclick = () => {
+        window.location.reload();
+    };
+}
+
 // Events
 startBtn.addEventListener('click', () => {
     modal.classList.remove('hidden');
@@ -138,7 +235,11 @@ startBtn.addEventListener('click', () => {
 });
 
 closeModal.addEventListener('click', () => {
-    modal.classList.add('hidden');
+    if (currentState === CHAT_STATES.ROLEPLAY_TEXT || currentState === CHAT_STATES.ROLEPLAY_VOICE) {
+        endSession();
+    } else {
+        modal.classList.add('hidden');
+    }
 });
 
 chatInput.addEventListener('input', () => {
@@ -159,6 +260,35 @@ chatInput.addEventListener('keypress', (e) => {
 
 sendBtn.addEventListener('click', () => {
     if (!sendBtn.disabled) handleUserInput();
+});
+
+// Chat Menu Toggle
+chatMenuBtn.addEventListener('click', () => {
+    chatAttachMenu.classList.toggle('hidden');
+});
+
+// Hide menu when clicking outside
+document.addEventListener('click', (e) => {
+    if (!chatMenuBtn.contains(e.target) && !chatAttachMenu.contains(e.target)) {
+        chatAttachMenu.classList.add('hidden');
+    }
+});
+
+// Handle Photo Upload
+photoUpload.addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        // Just acknowledging the photo selection in UI for now
+        chatAttachMenu.classList.add('hidden');
+        addUserMessage(`[사진 첨부됨: ${file.name}]`, true);
+        
+        setTimeout(() => {
+             addBotMessage("Great picture! What is this showing?", null, null, true);
+        }, 1000);
+        
+        // Reset file input
+        e.target.value = '';
+    }
 });
 
 // API Key Saving logic removed
@@ -277,6 +407,7 @@ window.handleOptionClick = function(choice) {
             chatInput.placeholder = "Type your sentence in English...";
             const startMsg = `Great, we will use Text. We are currently at the ${englishSetting}. What do you want to do here?`;
             addBotMessage(startMsg, null, null, true);
+            resetTimers(); // Start timer when session officially begins
         }
     }
 };
@@ -300,12 +431,21 @@ async function handleUserInput() {
         // Common mock scenarios
         const userTextLower = text.toLowerCase();
         
-        if (userTextLower.includes("im name is") || userTextLower.includes("my name are")) {
+        if (userTextLower.includes("im name is") || userTextLower.includes("my name are") || userTextLower.includes("i am go")) {
+            const wrongW = userTextLower.includes("i am go") ? "am go" : "im name is";
+            const rightW = userTextLower.includes("i am go") ? "go" : "my name is";
+            const fullS = userTextLower.includes("i am go") ? "I go to school." : "Hi, my name is Apple.";
+            const reason = userTextLower.includes("i am go") 
+                ? "일반동사(go)와 be동사(am)는 같이 쓸 수 없습니다." 
+                : "소유격(my) 뒤에 명사(name)가 와야 올바른 표현입니다.";
+            
             correction = {
-                original: text.replace(/im name is/i, "<span class='text-red'>im name is</span>").replace(/my name are/i, "<span class='text-red'>my name are</span>"),
-                fixed: "Hi, <span class='text-green'>my name is</span> " + text.split("is ")[1] + "."
+                wrongWord: wrongW,
+                rightWord: rightW,
+                fullSentence: fullS,
+                reason: reason
             };
-            response = "Nice to meet you! I am your AI friend. What are we doing here at the " + englishSetting + "?";
+            response = "Nice to meet you! Tell me more about what we should do.";
         } else if (userTextLower.includes("i go to school by bus everyday")) {
              // Example grammatically correct just to show flow
              response = "That's a great way to commute! Does it take long?";
@@ -313,8 +453,12 @@ async function handleUserInput() {
             const wrongPart = userTextLower.includes("i wants") ? "I wants" : "he want";
             const rightPart = userTextLower.includes("i wants") ? "I want" : "he wants";
             correction = {
-                original: text.replace(new RegExp(wrongPart, "i"), `<span class='text-red'>${wrongPart}</span>`),
-                fixed: text.replace(new RegExp(wrongPart, "i"), `<span class='text-green'>${rightPart}</span>`)
+                wrongWord: wrongPart,
+                rightWord: rightPart,
+                fullSentence: text.replace(new RegExp(wrongPart, "i"), rightPart),
+                reason: userTextLower.includes("i wants") 
+                    ? "1인칭 주어(I) 뒤에는 동사원형이 와야 합니다." 
+                    : "3인칭 단수 주어(He) 뒤에는 동사에 's'가 붙어야 합니다."
             };
             response = "I understand. What else do you want to share?";
         } else {
@@ -330,5 +474,13 @@ async function handleUserInput() {
         }
 
         addBotMessage(response, null, correction, true);
+        resetTimers(); // Reset timer after user interaction and bot response
+        
+        // If the user says "bye", "quit", or "대화종료", trigger manual endSession
+        if (userTextLower === "bye" || userTextLower === "quit" || userTextLower === "대화종료" || userTextLower === "종료") {
+            setTimeout(() => {
+                endSession();
+            }, 2000);
+        }
     }
 }

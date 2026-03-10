@@ -7,6 +7,7 @@
     <link rel="stylesheet" href="style.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body>
     <div class="app-container">
@@ -101,13 +102,61 @@
                     <p>이 기능은 아직 준비 중입니다.<br><b>"AI 롤플레잉"</b> 탭을 클릭해 역할을 체험해 보세요!</p>
                 </div>
 
-                <div class="input-area" id="input-area">
-                    <button class="menu-plus-btn"><i class="fa-solid fa-bars"></i></button>
-                    <div class="input-wrapper">
+                <div class="input-area relative" id="input-area">
+                    <button class="menu-plus-btn" id="chat-menu-btn"><i class="fa-solid fa-bars"></i></button>
+                    
+                    <!-- Chat Attachment Menu (Hidden by default) -->
+                    <div id="chat-attach-menu" class="absolute bottom-[70px] left-4 bg-white border border-gray-200 shadow-lg rounded-xl p-2 hidden z-10 w-40">
+                        <label for="photo-upload" class="flex items-center gap-3 px-3 py-2 hover:bg-gray-50 rounded-lg cursor-pointer text-sm text-gray-700 transition">
+                            <div class="w-8 h-8 rounded-full bg-teal-50 text-teal-600 flex items-center justify-center">
+                                <i class="fa-regular fa-image"></i>
+                            </div>
+                            <span>사진 추가</span>
+                        </label>
+                        <input type="file" id="photo-upload" class="hidden" accept="image/*">
+                    </div>
+
+                    <div class="input-wrapper ml-3">
                         <input type="text" id="chat-input" placeholder="질문을 입력해 주세요." autocomplete="off" disabled>
                         <button class="mic-btn hidden" id="mic-btn"><i class="fa-solid fa-microphone"></i></button>
                         <button class="send-btn" id="send-btn" disabled><i class="fa-solid fa-paper-plane"></i></button>
                     </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Summary Report Modal (Hidden by default) -->
+        <div id="summary-modal" class="modal-wrapper hidden">
+            <div class="bg-white rounded-2xl shadow-xl w-full max-w-sm overflow-hidden animate-fade-in-up z-50 transform transition-transform scale-95 opacity-0 duration-300" id="summary-card">
+                <div class="bg-teal-600 p-4 text-center">
+                    <h2 class="text-xl font-bold text-white">🎉 Roleplay Completed!</h2>
+                    <p class="text-teal-100 text-sm mt-1">오늘의 학습 리포트를 확인하세요.</p>
+                </div>
+                
+                <div class="p-6">
+                    <div class="mb-5">
+                        <h3 class="flex items-center text-[15px] font-bold text-gray-800 mb-3">
+                            <span class="bg-red-100 text-red-600 p-1.5 rounded mr-2 text-xs">Correction</span> 
+                            오늘 가장 많이 틀린 문법
+                        </h3>
+                        <ul class="list-disc pl-5 text-[14px] text-gray-600 space-y-1.5" id="summary-mistakes-list">
+                            <!-- Injected by JS -->
+                        </ul>
+                    </div>
+
+                    <div class="mb-6">
+                        <h3 class="flex items-center text-[15px] font-bold text-gray-800 mb-3">
+                            <span class="bg-green-100 text-green-600 p-1.5 rounded mr-2 text-xs">Vocabulary</span> 
+                            오늘 새롭게 배운 표현
+                        </h3>
+                        <ul class="list-disc pl-5 text-[14px] text-gray-600 space-y-1.5" id="summary-vocab-list">
+                            <!-- Injected by JS -->
+                        </ul>
+                    </div>
+
+                    <button id="restart-btn" class="w-full bg-[#4a6ee0] hover:bg-blue-700 text-white font-bold py-3 rounded-xl transition shadow-md">
+                        다른 장소에서 다시 시작하기
+                    </button>
                 </div>
             </div>
         </div>

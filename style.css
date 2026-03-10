@@ -481,21 +481,48 @@ body {
 /* Grammar Correction Box inside Bot Bubble */
 .grammar-correction {
     margin-top: 8px;
-    padding: 8px;
+    padding: 10px 12px;
     background: #fdf2f2;
     border-left: 3px solid #e74c3c;
-    border-radius: 4px;
-    font-size: 12px;
-    color: #555;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #444;
+    line-height: 1.4;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
 }
-.grammar-correction .original {
-    text-decoration: line-through;
+.grammar-correction-title {
+    font-size: 11px;
+    font-weight: 700;
     color: #e74c3c;
     margin-bottom: 4px;
+    display: block;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.grammar-correction .original {
+    margin-bottom: 4px;
+}
+.grammar-correction del {
+    color: #e74c3c;
+    text-decoration: line-through;
+    opacity: 0.8;
 }
 .grammar-correction .corrected {
+    color: #333;
+}
+.grammar-correction b {
     color: #27ae60;
-    font-weight: 600;
+    font-weight: 700;
+}
+.grammar-reason {
+    margin-top: 6px;
+    padding-top: 6px;
+    border-top: 1px dashed #fadbd8;
+    color: #555;
+    font-size: 11.5px;
+}
+.grammar-reason b {
+    color: #e74c3c;
 }
 
 /* Inline Correction Colors */
