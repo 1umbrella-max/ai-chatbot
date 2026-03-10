@@ -1,0 +1,117 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Tutor - Roleplay Chatbot</title>
+    <link rel="stylesheet" href="style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Sidebar Navigation -->
+        <aside class="sidebar">
+            <div class="menu-icon"><i class="fa-solid fa-bars"></i></div>
+            <nav class="nav-links">
+                <a href="#" class="nav-item active"><i class="fa-solid fa-house"></i></a>
+                <a href="#" class="nav-item"><i class="fa-solid fa-book-open"></i></a>
+                <a href="#" class="nav-item"><i class="fa-solid fa-user-group"></i></a>
+                <a href="#" class="nav-item"><i class="fa-solid fa-folder"></i></a>
+                <a href="#" class="nav-item presentation"><i class="fa-solid fa-person-chalkboard"></i></a>
+                <a href="#" class="nav-item"><i class="fa-solid fa-calendar-check"></i></a>
+            </nav>
+        </aside>
+
+        <!-- Main Content Area -->
+        <main class="main-content">
+            <!-- Header -->
+            <header class="app-header">
+                <h1>AI 학습관</h1>
+                <div class="header-actions">
+                    <button class="icon-btn"><i class="fa-regular fa-bell"></i></button>
+                    <button class="icon-btn"><i class="fa-regular fa-comment-dots"></i></button>
+                    <button class="icon-btn"><i class="fa-regular fa-file-lines"></i></button>
+                    <button class="icon-btn"><i class="fa-solid fa-language"></i></button>
+                    <button class="icon-btn"><i class="fa-solid fa-gear"></i></button>
+                    <button class="end-class-btn"><i class="fa-solid fa-arrow-right-from-bracket"></i> 수업 종료</button>
+                </div>
+            </header>
+
+            <!-- Content Area -->
+            <section class="banner">
+                <div class="banner-icon">📊</div>
+                <div class="banner-text">
+                    <h2>AI와 함께하는 영어 학습</h2>
+                    <p>AI를 활용한 실전 활동으로 영어 실력을 탄탄히 쌓고, 자신감을 키워 보세요!</p>
+                </div>
+                <button id="start-tutor-btn" class="start-btn">AI 튜터 시작하기</button>
+            </section>
+
+            <div class="tabs">
+                <div class="tab active">AI Role-play</div>
+                <div class="tab">AI Sounds</div>
+            </div>
+
+            <div class="lessons-grid">
+                <div class="lesson-card">
+                    <h3>Lesson 1. Happy Together</h3>
+                    <div class="card-img bg-green"></div>
+                </div>
+                <div class="lesson-card">
+                    <h3>Lesson 2. Eat, Play, and Live Well!</h3>
+                    <div class="card-img bg-purple"></div>
+                </div>
+                <div class="lesson-card">
+                    <h3>Lesson 3. Understand Others</h3>
+                    <div class="card-img bg-orange"></div>
+                </div>
+            </div>
+        </main>
+
+        <!-- AI Tutor Modal -->
+        <div id="ai-tutor-modal" class="modal-wrapper hidden">
+            <div class="chat-modal">
+                <div class="modal-header">
+                    <div class="ai-avatar-small"><i class="fa-solid fa-robot"></i></div>
+                    <h2>AI 튜터</h2>
+                    <div class="modal-controls">
+                        <button class="icon-btn drag-handle"><i class="fa-solid fa-arrows-up-down"></i></button>
+                        <button class="icon-btn close-modal" id="close-modal-btn"><i class="fa-solid fa-xmark"></i></button>
+                    </div>
+                </div>
+                
+                <div class="mode-toggle">
+                    <button class="mode-btn" id="mode-coach"><i class="fa-solid fa-ranking-star"></i> 학습 코칭</button>
+                    <button class="mode-btn" id="mode-helper"><i class="fa-solid fa-comment-medical"></i> 학습 도우미</button>
+                    <button class="mode-btn active" id="mode-roleplay"><i class="fa-solid fa-masks-theater"></i> AI 롤플레잉</button>
+                </div>
+                
+                <div class="warning-banner" id="warning-banner">
+                    <p>AI 튜터가 실수할 수 있으니, 중요한 정보는 교과서 내용을 확인하세요.</p>
+                    <button class="close-warning"><i class="fa-solid fa-xmark"></i></button>
+                </div>
+
+                <div class="chat-container" id="chat-container">
+                    <!-- Chat Messages will be injected here dynamically -->
+                </div>
+
+                <div class="not-implemented-msg hidden" id="not-implemented-msg">
+                    <i class="fa-solid fa-hammer"></i>
+                    <p>이 기능은 아직 준비 중입니다.<br><b>"AI 롤플레잉"</b> 탭을 클릭해 역할을 체험해 보세요!</p>
+                </div>
+
+                <div class="input-area" id="input-area">
+                    <button class="menu-plus-btn"><i class="fa-solid fa-bars"></i></button>
+                    <div class="input-wrapper">
+                        <input type="text" id="chat-input" placeholder="질문을 입력해 주세요." autocomplete="off" disabled>
+                        <button class="mic-btn hidden" id="mic-btn"><i class="fa-solid fa-microphone"></i></button>
+                        <button class="send-btn" id="send-btn" disabled><i class="fa-solid fa-paper-plane"></i></button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="app.js"></script>
+</body>
+</html>
