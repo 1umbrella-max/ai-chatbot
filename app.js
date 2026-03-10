@@ -62,7 +62,7 @@ function getCurrentTime() {
 }
 
 // Helper: Add Bot Message
-function addBotMessage(text, options = null, correction = null, saveHistory = true) {
+function addBotMessage(text, options = null, correction = null, pronunciation = null, saveHistory = true) {
     if (saveHistory) {
         // chatHistory.push({ role: 'assistant', content: text });
     }
@@ -95,6 +95,26 @@ function addBotMessage(text, options = null, correction = null, saveHistory = tr
                     <div class="original">Instead of <del>${correction.wrongWord}</del>, Say: <b>${correction.rightWord}</b>.</div>
                     <div class="corrected">(${correction.fullSentence})</div>
                     ${correction.reason ? `<div class="grammar-reason"><b>이유:</b> ${correction.reason}</div>` : ''}
+                </div>
+            `;
+        }
+        
+        if (pronunciation) {
+            extraHTML += `
+                <div class="pronunciation-correction">
+                    <span class="pronunciation-correction-title">🔊 Pronunciation Check</span>
+                    <div class="original">You sounded like: <del>${pronunciation.wrongSound}</del></div>
+                    <div class="corrected">
+                        Try saying: <b>${pronunciation.rightSound}</b>
+                        ${pronunciation.audioFile ? `<button class="play-audio-btn" onclick="playAudio('${pronunciation.audioFile}')"><i class="fa-solid fa-volume-high"></i></button>` : ''}
+                    </div>
+                    ${pronunciation.examples ? `
+                    <div class="pronunciation-examples">
+                        <b>Examples:</b>
+                        <ul>
+                            ${pronunciation.examples.map(ex => `<li>${ex}</li>`).join('')}
+                        </ul>
+                    </div>` : ''}
                 </div>
             `;
         }
@@ -147,6 +167,17 @@ function scrollToBottom() {
     chatContainer.scrollTop = chatContainer.scrollHeight;
 }
 
+// Global Audio Player
+let currentAudio = null;
+window.playAudio = function(audioSrc) {
+    if (currentAudio) {
+        currentAudio.pause();
+        currentAudio.currentTime = 0;
+    }
+    currentAudio = new Audio(audioSrc);
+    currentAudio.play().catch(e => console.error("Audio play failed:", e));
+};
+
 // Helper: Handle Idle Timeout & Auto Close
 function resetTimers() {
     if (idleTimer) clearTimeout(idleTimer);
@@ -158,7 +189,7 @@ function resetTimers() {
         // 5-minute notification
         idleTimer = setTimeout(() => {
             const warningMsg = "What are you doing? Please reply.";
-            addBotMessage(warningMsg, null, null, true);
+            addBotMessage(warningMsg, null, null, null, true);
 
             // Trigger Browser Push Notification
             if ("Notification" in window && Notification.permission === "granted") {
@@ -283,7 +314,7 @@ photoUpload.addEventListener('change', (e) => {
         addUserMessage(`[사진 첨부됨: ${file.name}]`, true);
         
         setTimeout(() => {
-             addBotMessage("Great picture! What is this showing?", null, null, true);
+             addBotMessage("Great picture! What is this showing?", null, null, null, true);
         }, 1000);
         
         // Reset file input
@@ -367,7 +398,7 @@ function startConversationFlow() {
         "병원",
         "대학교",
         "집 안"
-    ], null, false); // Don't save to history yet
+    ], null, null, false); // Don't save to history yet
 }
 
 const ROLEPLAY_PLACES = {
@@ -389,7 +420,7 @@ window.handleOptionClick = function(choice) {
         addBotMessage(`좋아요! <b>${roleplaySetting}</b>에서 롤플레잉을 진행해 볼게요.<br>대화할 때 음성과 타자 중 어떤 방식을 사용하시겠어요?`, [
             "Voice (음성)",
             "Text (타자)"
-        ], null, false);
+        ], null, null, false);
     } else if (currentState === CHAT_STATES.SELECT_METHOD) {
         const englishSetting = ROLEPLAY_PLACES[roleplaySetting] || roleplaySetting;
         
@@ -399,14 +430,14 @@ window.handleOptionClick = function(choice) {
             micBtn.classList.remove('hidden');
             chatInput.placeholder = "Click the mic or type in English...";
             const startMsg = `Let's talk with your Voice! Here we are at the ${englishSetting}. What do you want to say first?`;
-            addBotMessage(startMsg, null, null, true);
+            addBotMessage(startMsg, null, null, null, true);
         } else {
             currentState = CHAT_STATES.ROLEPLAY_TEXT;
             chatInput.disabled = false;
             micBtn.classList.add('hidden'); // Hide mic for text mode
             chatInput.placeholder = "Type your sentence in English...";
             const startMsg = `Great, we will use Text. We are currently at the ${englishSetting}. What do you want to do here?`;
-            addBotMessage(startMsg, null, null, true);
+            addBotMessage(startMsg, null, null, null, true);
             resetTimers(); // Start timer when session officially begins
         }
     }
@@ -424,8 +455,9 @@ async function handleUserInput() {
     if (currentState === CHAT_STATES.ROLEPLAY_TEXT || currentState === CHAT_STATES.ROLEPLAY_VOICE) {
         const englishSetting = ROLEPLAY_PLACES[roleplaySetting] || roleplaySetting;
 
-        // Mock logic for English role-play & Grammar correction
+        // Mock logic for English role-play & Grammar/Pronunciation correction
         let correction = null;
+        let pronunciation = null;
         let response = "";
 
         // Common mock scenarios
@@ -468,12 +500,50 @@ async function handleUserInput() {
              if (userTextLower === "good") {
                  correction = {
                      original: "<span class='text-red'>good</span>",
-                     fixed: "I am feeling <span class='text-green'>good</span> today."
+                     fixed: "I am feeling <span class='text-green'>good</span> today.",
+                     reason: null
                  };
              }
         }
+        
+        // --- ADD PRONUNCIATION MOCK IF VOICE MODE ---
+        if (currentState === CHAT_STATES.ROLEPLAY_VOICE) {
+            if (userTextLower.includes("copy") || userTextLower.includes("coffee")) {
+                pronunciation = {
+                    wrongSound: "copy (코피)",
+                    rightSound: "coffee (커-피)",
+                    audioFile: "서초동.m4a", // Mock audio file provided by user
+                    examples: [
+                        "I would like a cup of <b>coffee</b>.",
+                        "This <b>coffee</b> is too hot."
+                    ]
+                };
+                if (!response) response = "Do you want some coffee?";
+            } else if (userTextLower.includes("pija") || userTextLower.includes("pizza")) {
+                 pronunciation = {
+                    wrongSound: "pija (피자)",
+                    rightSound: "pizza (핕-자)",
+                    audioFile: "서초동.m4a",
+                    examples: [
+                        "Let's order some <b>pizza</b> tonight.",
+                        "My favorite food is <b>pizza</b>."
+                    ]
+                };
+                if (!response) response = "Pizza sounds great!";
+            } else {
+                 // Generic fallback mock pronunciation for testing voice UI if neither word is used
+                 if (Math.random() > 0.5) {
+                     pronunciation = {
+                         wrongSound: "very (베리)",
+                         rightSound: "very (붸-리)",
+                         audioFile: null,
+                         examples: ["Thank you <b>very</b> much."]
+                     };
+                 }
+            }
+        }
 
-        addBotMessage(response, null, correction, true);
+        addBotMessage(response, null, correction, pronunciation, true);
         resetTimers(); // Reset timer after user interaction and bot response
         
         // If the user says "bye", "quit", or "대화종료", trigger manual endSession

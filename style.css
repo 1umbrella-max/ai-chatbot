@@ -525,6 +525,72 @@ body {
     color: #e74c3c;
 }
 
+/* Pronunciation Correction Box */
+.pronunciation-correction {
+    margin-top: 8px;
+    padding: 10px 12px;
+    background: #ebf5ff;
+    border-left: 3px solid #3b82f6;
+    border-radius: 6px;
+    font-size: 13px;
+    color: #444;
+    line-height: 1.4;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.pronunciation-correction-title {
+    font-size: 11px;
+    font-weight: 700;
+    color: #3b82f6;
+    margin-bottom: 4px;
+    display: block;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.pronunciation-correction del {
+    color: #64748b;
+    text-decoration: line-through;
+    opacity: 0.8;
+}
+.pronunciation-correction b {
+    color: #2563eb;
+    font-weight: 700;
+}
+.play-audio-btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: #3b82f6;
+    color: white;
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    font-size: 10px;
+    cursor: pointer;
+    margin-left: 6px;
+    vertical-align: middle;
+    transition: 0.2s;
+}
+.play-audio-btn:hover {
+    background: #2563eb;
+    transform: scale(1.1);
+}
+.pronunciation-examples {
+    margin-top: 8px;
+    padding-top: 8px;
+    border-top: 1px dashed #bfdbfe;
+    font-size: 12px;
+    color: #475569;
+}
+.pronunciation-examples ul {
+    margin-top: 4px;
+    padding-left: 16px;
+    list-style-type: square;
+}
+.pronunciation-examples li {
+    margin-bottom: 2px;
+}
+
 /* Inline Correction Colors */
 .text-red {
     color: #e74c3c;
