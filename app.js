@@ -1,13 +1,12 @@
 // State Machine modes
 const CHAT_STATES = {
     INIT: 'INIT',
-    SELECT_SETTING: 'SELECT_SETTING',
-    SELECT_METHOD: 'SELECT_METHOD',
-    ROLEPLAY_VOICE: 'ROLEPLAY_VOICE',
-    ROLEPLAY_TEXT: 'ROLEPLAY_TEXT'
+    SELECT_CATEGORY: 'SELECT_CATEGORY',
+    CHAT_ACTIVE: 'CHAT_ACTIVE'
 };
 
 let currentState = CHAT_STATES.INIT;
+let currentCategory = null;
 let idleTimer = null;
 let sessionCloseTimer = null; // 20-minute auto-close timer
 const IDLE_TIMEOUT_MS = 5 * 60 * 1000; // 5 minutes
@@ -21,7 +20,8 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 // DOM Elements
-const startBtn = document.getElementById('start-tutor-btn');
+const sectionTriggerBtn = document.getElementById('ai-roleplay-section-trigger');
+const floatingBtn = document.getElementById('floating-chatbot-btn');
 const modal = document.getElementById('ai-tutor-modal');
 const closeModal = document.getElementById('close-modal-btn');
 const chatContainer = document.getElementById('chat-container');
@@ -112,7 +112,12 @@ function addBotMessage(text, options = null, correction = null, pronunciation = 
                     <div class="pronunciation-examples">
                         <b>Examples:</b>
                         <ul>
-                            ${pronunciation.examples.map(ex => `<li>${ex}</li>`).join('')}
+                            ${pronunciation.examples.map(ex => `
+                                <li>
+                                    <span>${ex.text}</span>
+                                    ${ex.audioFile ? `<button class="play-audio-btn" onclick="playAudio('${ex.audioFile}', this)"><i class="fa-solid fa-volume-high"></i></button>` : ''}
+                                </li>
+                            `).join('')}
                         </ul>
                     </div>` : ''}
                 </div>
@@ -133,6 +138,7 @@ function addBotMessage(text, options = null, correction = null, pronunciation = 
                 <div class="msg-content">
                     <div class="bubble">
                         ${text}
+                        <button class="msg-audio-btn" onclick="playAudio('서초동.m4a', this)" title="Listen to message"><i class="fa-solid fa-volume-high"></i></button>
                         ${extraHTML}
                     </div>
                     <div class="msg-time">${getCurrentTime()}</div>
@@ -169,13 +175,26 @@ function scrollToBottom() {
 
 // Global Audio Player
 let currentAudio = null;
-window.playAudio = function(audioSrc) {
+window.playAudio = function(audioSrc, btnElement) {
     if (currentAudio) {
         currentAudio.pause();
         currentAudio.currentTime = 0;
+        // Remove playing class from all buttons
+        document.querySelectorAll('.playing-audio').forEach(btn => btn.classList.remove('playing-audio'));
     }
+    
+    if (btnElement) {
+        btnElement.classList.add('playing-audio');
+    }
+
     currentAudio = new Audio(audioSrc);
     currentAudio.play().catch(e => console.error("Audio play failed:", e));
+    
+    currentAudio.onended = () => {
+        if (btnElement) {
+            btnElement.classList.remove('playing-audio');
+        }
+    };
 };
 
 // Helper: Handle Idle Timeout & Auto Close
@@ -258,15 +277,18 @@ function endSession() {
 }
 
 // Events
-startBtn.addEventListener('click', () => {
+function openChatModal() {
     modal.classList.remove('hidden');
     if (currentState === CHAT_STATES.INIT) {
         startConversationFlow();
     }
-});
+}
+
+if (sectionTriggerBtn) sectionTriggerBtn.addEventListener('click', openChatModal);
+if (floatingBtn) floatingBtn.addEventListener('click', openChatModal);
 
 closeModal.addEventListener('click', () => {
-    if (currentState === CHAT_STATES.ROLEPLAY_TEXT || currentState === CHAT_STATES.ROLEPLAY_VOICE) {
+    if (currentState === CHAT_STATES.CHAT_ACTIVE) {
         endSession();
     } else {
         modal.classList.add('hidden');
@@ -388,58 +410,66 @@ if (recognition) {
 function startConversationFlow() {
     chatContainer.innerHTML = ''; // Clear chat
     chatHistory = []; // Reset history
-    currentState = CHAT_STATES.SELECT_SETTING;
+    currentState = CHAT_STATES.SELECT_CATEGORY;
+    currentCategory = null;
+    chatInput.disabled = true;
+    micBtn.classList.add('hidden');
     
-    addBotMessage("안녕하세요! 여러분의 학습 친구 AI 튜터입니다.<br><br>우리 영어로 대화해 볼까요? 지금 우리는 어디에 있을까요?", [
-        "PC방",
-        "노래방",
-        "놀이터",
-        "도서관",
-        "병원",
-        "대학교",
-        "집 안"
-    ], null, null, false); // Don't save to history yet
+    addBotMessage("안녕하세요! 여러분의 학습 친구 AI 튜터입니다.<br><br>오늘은 어떤 방식으로 영어를 연습해 볼까요?", [
+        "오늘의 일기쓰기",
+        "고민상담",
+        "밸런스게임",
+        "스몰톡",
+        "롤플레잉"
+    ], null, null, false);
 }
 
-const ROLEPLAY_PLACES = {
-    "PC방": "PC Cafe",
-    "노래방": "Karaoke",
-    "놀이터": "Playground",
-    "도서관": "Library",
-    "병원": "Hospital",
-    "대학교": "University",
-    "집 안": "Home"
-};
+const ROLEPLAY_PLACES = [
+    { ko: "PC방", en: "PC room", prompt: "We are at a PC room, what game will you play?" },
+    { ko: "도서관", en: "library", prompt: "We are at the library, what book are you going to read?" },
+    { ko: "노래방", en: "karaoke", prompt: "We are at karaoke! What song do you like?" },
+    { ko: "카페 가는 길", en: "heading to a cafe", prompt: "We are heading to a cafe. What does it look like?" },
+    { ko: "집", en: "home", prompt: "You came over to my house! What should we do?" },
+    { ko: "백화점", en: "department store", prompt: "We are at a department store, what do you want to buy?" }
+];
 
 window.handleOptionClick = function(choice) {
     addUserMessage(choice, false);
     
-    if (currentState === CHAT_STATES.SELECT_SETTING) {
-        roleplaySetting = choice;
-        currentState = CHAT_STATES.SELECT_METHOD;
-        addBotMessage(`좋아요! <b>${roleplaySetting}</b>에서 롤플레잉을 진행해 볼게요.<br>대화할 때 음성과 타자 중 어떤 방식을 사용하시겠어요?`, [
-            "Voice (음성)",
-            "Text (타자)"
-        ], null, null, false);
-    } else if (currentState === CHAT_STATES.SELECT_METHOD) {
-        const englishSetting = ROLEPLAY_PLACES[roleplaySetting] || roleplaySetting;
+    if (currentState === CHAT_STATES.SELECT_CATEGORY) {
+        currentCategory = choice;
+        currentState = CHAT_STATES.CHAT_ACTIVE;
         
-        if (choice.includes("Voice")) {
-            currentState = CHAT_STATES.ROLEPLAY_VOICE;
-            chatInput.disabled = false;
-            micBtn.classList.remove('hidden');
-            chatInput.placeholder = "Click the mic or type in English...";
-            const startMsg = `Let's talk with your Voice! Here we are at the ${englishSetting}. What do you want to say first?`;
-            addBotMessage(startMsg, null, null, null, true);
-        } else {
-            currentState = CHAT_STATES.ROLEPLAY_TEXT;
-            chatInput.disabled = false;
-            micBtn.classList.add('hidden'); // Hide mic for text mode
-            chatInput.placeholder = "Type your sentence in English...";
-            const startMsg = `Great, we will use Text. We are currently at the ${englishSetting}. What do you want to do here?`;
-            addBotMessage(startMsg, null, null, null, true);
-            resetTimers(); // Start timer when session officially begins
+        // Enable inputs for active chat
+        chatInput.disabled = false;
+        micBtn.classList.remove('hidden'); // allow voice mode in all for now
+        chatInput.placeholder = "Type or use voice in English...";
+        
+        let initialBotPrompt = "";
+        
+        switch (choice) {
+            case "오늘의 일기쓰기":
+                initialBotPrompt = "오늘 너의 하루는 어땠어? 틀려도 괜찮아 오늘의 하루를 들려줘. 틀린 게 있다면 내가 고쳐줄게.";
+                break;
+            case "고민상담":
+                initialBotPrompt = "너의 모든 것을 말해줘. 저장되지 않아서 편하게 말해도 돼. 하지만 영어로 말해야 한다는 규칙이 있어!";
+                break;
+            case "밸런스게임":
+                initialBotPrompt = "Balance Game Time! Which one do you prefer: Brushing teeth with mint choco OR Eating toothpaste?";
+                break;
+            case "스몰톡":
+                initialBotPrompt = "Hello! What kind of drinks do you like? Energy drinks are really trendy these days!";
+                break;
+            case "롤플레잉":
+                const randomPlace = ROLEPLAY_PLACES[Math.floor(Math.random() * ROLEPLAY_PLACES.length)];
+                initialBotPrompt = randomPlace.prompt;
+                break;
         }
+        
+        setTimeout(() => {
+            addBotMessage(initialBotPrompt, null, null, null, true);
+            resetTimers(); // Start session timers
+        }, 500);
     }
 };
 
@@ -452,95 +482,50 @@ async function handleUserInput() {
     sendBtn.classList.remove('active');
     sendBtn.disabled = true;
 
-    if (currentState === CHAT_STATES.ROLEPLAY_TEXT || currentState === CHAT_STATES.ROLEPLAY_VOICE) {
-        const englishSetting = ROLEPLAY_PLACES[roleplaySetting] || roleplaySetting;
-
-        // Mock logic for English role-play & Grammar/Pronunciation correction
-        let correction = null;
-        let pronunciation = null;
-        let response = "";
-
-        // Common mock scenarios
+    if (currentState === CHAT_STATES.CHAT_ACTIVE) {
         const userTextLower = text.toLowerCase();
         
-        if (userTextLower.includes("im name is") || userTextLower.includes("my name are") || userTextLower.includes("i am go")) {
-            const wrongW = userTextLower.includes("i am go") ? "am go" : "im name is";
-            const rightW = userTextLower.includes("i am go") ? "go" : "my name is";
-            const fullS = userTextLower.includes("i am go") ? "I go to school." : "Hi, my name is Apple.";
-            const reason = userTextLower.includes("i am go") 
-                ? "일반동사(go)와 be동사(am)는 같이 쓸 수 없습니다." 
-                : "소유격(my) 뒤에 명사(name)가 와야 올바른 표현입니다.";
-            
-            correction = {
-                wrongWord: wrongW,
-                rightWord: rightW,
-                fullSentence: fullS,
-                reason: reason
-            };
-            response = "Nice to meet you! Tell me more about what we should do.";
-        } else if (userTextLower.includes("i go to school by bus everyday")) {
-             // Example grammatically correct just to show flow
-             response = "That's a great way to commute! Does it take long?";
-        } else if (userTextLower.includes("i wants") || userTextLower.includes("he want")) {
-            const wrongPart = userTextLower.includes("i wants") ? "I wants" : "he want";
-            const rightPart = userTextLower.includes("i wants") ? "I want" : "he wants";
-            correction = {
-                wrongWord: wrongPart,
-                rightWord: rightPart,
-                fullSentence: text.replace(new RegExp(wrongPart, "i"), rightPart),
-                reason: userTextLower.includes("i wants") 
-                    ? "1인칭 주어(I) 뒤에는 동사원형이 와야 합니다." 
-                    : "3인칭 단수 주어(He) 뒤에는 동사에 's'가 붙어야 합니다."
-            };
-            response = "I understand. What else do you want to share?";
-        } else {
-             // Generic mock response
-             response = "That's very interesting! Can you tell me more about it in English?";
-             // Just randomly giving a fake correction if they say "good"
-             if (userTextLower === "good") {
-                 correction = {
-                     original: "<span class='text-red'>good</span>",
-                     fixed: "I am feeling <span class='text-green'>good</span> today.",
-                     reason: null
-                 };
-             }
-        }
-        
-        // --- ADD PRONUNCIATION MOCK IF VOICE MODE ---
-        if (currentState === CHAT_STATES.ROLEPLAY_VOICE) {
-            if (userTextLower.includes("copy") || userTextLower.includes("coffee")) {
-                pronunciation = {
-                    wrongSound: "copy (코피)",
-                    rightSound: "coffee (커-피)",
-                    audioFile: "서초동.m4a", // Mock audio file provided by user
-                    examples: [
-                        "I would like a cup of <b>coffee</b>.",
-                        "This <b>coffee</b> is too hot."
-                    ]
-                };
-                if (!response) response = "Do you want some coffee?";
-            } else if (userTextLower.includes("pija") || userTextLower.includes("pizza")) {
-                 pronunciation = {
-                    wrongSound: "pija (피자)",
-                    rightSound: "pizza (핕-자)",
-                    audioFile: "서초동.m4a",
-                    examples: [
-                        "Let's order some <b>pizza</b> tonight.",
-                        "My favorite food is <b>pizza</b>."
-                    ]
-                };
-                if (!response) response = "Pizza sounds great!";
-            } else {
-                 // Generic fallback mock pronunciation for testing voice UI if neither word is used
-                 if (Math.random() > 0.5) {
-                     pronunciation = {
-                         wrongSound: "very (베리)",
-                         rightSound: "very (붸-리)",
-                         audioFile: null,
-                         examples: ["Thank you <b>very</b> much."]
-                     };
-                 }
-            }
+        let correction = null;
+        let pronunciation = null; // Leaving pronunciation stub for future voice features
+        let response = "";
+
+        // Category-specific mock responses
+        switch(currentCategory) {
+            case "오늘의 일기쓰기":
+                if (userTextLower.includes("sed") || userTextLower.includes("sad") || userTextLower.includes("late")) {
+                    correction = {
+                        wrongWord: text,
+                        rightWord: "I'm so bummed out... I feel terrible. The other day, I was late for school. It really upset me when my friend called me 'the late guy', but I swear I'll never be late for class again!",
+                        fullSentence: "원어민스럽게 자연스러운 표현으로 교정해 보았어요.",
+                        reason: "단순히 'sad' 나 'late'를 나열하기보다, 'bummed out' (매우 실망한), 'upset me' (날 속상하게 했다) 같은 감정 표현과 'I swear' (맹세코 ~하다) 같은 생생한 원어민 어휘를 쓰면 훨씬 자연스럽습니다."
+                    };
+                    response = "You had a tough day! What did you do after that happened?";
+                } else {
+                    response = "I see. How did that make you feel?";
+                }
+                break;
+                
+            case "고민상담":
+                response = "I can completely understand why you feel that way. It's totally valid. What makes you worry about it the most?";
+                break;
+                
+            case "밸런스게임":
+                response = "Oh, really? Why did you choose that? Tell me the reason in detail!";
+                break;
+                
+            case "스몰톡":
+                response = "That's very interesting! I agree with you. What do you think is the best part about it?";
+                break;
+                
+            case "롤플레잉":
+                if (userTextLower.includes("play") || userTextLower.includes("game")) {
+                    response = "Sounds fun! I haven't played that one before. Can you teach me how to play?";
+                } else if (userTextLower.includes("buy") || userTextLower.includes("shop")) {
+                    response = "Great choice. Should we look for a discount or just buy it right away?";
+                } else {
+                    response = "Wow! Let's do that. What should we do next?";
+                }
+                break;
         }
 
         addBotMessage(response, null, correction, pronunciation, true);

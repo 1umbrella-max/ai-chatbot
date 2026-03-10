@@ -11,64 +11,16 @@
 </head>
 <body>
     <div class="app-container">
-        <!-- Sidebar Navigation -->
-        <aside class="sidebar">
-            <div class="menu-icon"><i class="fa-solid fa-bars"></i></div>
-            <nav class="nav-links">
-                <a href="#" class="nav-item active"><i class="fa-solid fa-house"></i></a>
-                <a href="#" class="nav-item"><i class="fa-solid fa-book-open"></i></a>
-                <a href="#" class="nav-item"><i class="fa-solid fa-user-group"></i></a>
-                <a href="#" class="nav-item"><i class="fa-solid fa-folder"></i></a>
-                <a href="#" class="nav-item presentation"><i class="fa-solid fa-person-chalkboard"></i></a>
-                <a href="#" class="nav-item"><i class="fa-solid fa-calendar-check"></i></a>
-            </nav>
-        </aside>
-
-        <!-- Main Content Area -->
-        <main class="main-content">
-            <!-- Header -->
-            <header class="app-header">
-                <h1>AI 학습관</h1>
-                <div class="header-actions">
-                    <button class="icon-btn"><i class="fa-regular fa-bell"></i></button>
-                    <button class="icon-btn"><i class="fa-regular fa-comment-dots"></i></button>
-                    <button class="icon-btn"><i class="fa-regular fa-file-lines"></i></button>
-                    <button class="icon-btn"><i class="fa-solid fa-language"></i></button>
-                    <button class="icon-btn"><i class="fa-solid fa-gear"></i></button>
-                    <button class="end-class-btn"><i class="fa-solid fa-arrow-right-from-bracket"></i> 수업 종료</button>
-                </div>
-            </header>
-
-            <!-- Content Area -->
-            <section class="banner">
-                <div class="banner-icon">📊</div>
-                <div class="banner-text">
-                    <h2>AI와 함께하는 영어 학습</h2>
-                    <p>AI를 활용한 실전 활동으로 영어 실력을 탄탄히 쌓고, 자신감을 키워 보세요!</p>
-                </div>
-                <button id="start-tutor-btn" class="start-btn">AI 튜터 시작하기</button>
-            </section>
-
-            <div class="tabs">
-                <div class="tab active">AI Role-play</div>
-                <div class="tab">AI Sounds</div>
-            </div>
-
-            <div class="lessons-grid">
-                <div class="lesson-card">
-                    <h3>Lesson 1. Happy Together</h3>
-                    <div class="card-img bg-green"></div>
-                </div>
-                <div class="lesson-card">
-                    <h3>Lesson 2. Eat, Play, and Live Well!</h3>
-                    <div class="card-img bg-purple"></div>
-                </div>
-                <div class="lesson-card">
-                    <h3>Lesson 3. Understand Others</h3>
-                    <div class="card-img bg-orange"></div>
-                </div>
-            </div>
-        </main>
+        <!-- Mock Background Layout -->
+        <div class="mock-lms-background">
+            <!-- Invisible/Overlay trigger for the specific section in the image -->
+            <button id="ai-roleplay-section-trigger" class="section-trigger" aria-label="Open AI Roleplay Section"></button>
+            
+            <!-- Floating Chatbot Icon at bottom right -->
+            <button id="floating-chatbot-btn" class="floating-btn" aria-label="Open Chatbot">
+                <i class="fa-solid fa-robot"></i>
+            </button>
+        </div>
 
         <!-- AI Tutor Modal -->
         <div id="ai-tutor-modal" class="modal-wrapper hidden">
