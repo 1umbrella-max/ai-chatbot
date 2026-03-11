@@ -216,8 +216,9 @@ function resetTimers() {
         
         // 5-minute notification
         idleTimer = setTimeout(() => {
-            const warningMsg = "What are you doing? Please reply.";
-            addBotMessage(warningMsg, null, null, null, true);
+            const warningMsg = "Are you still there? Please respond if you want to continue the conversation.";
+            const warningTrans = "아직 계신가요? 대화를 계속하시려면 답변을 남겨주세요.";
+            addBotMessage(warningMsg, null, null, null, true, warningTrans);
 
             // Trigger Browser Push Notification
             if ("Notification" in window && Notification.permission === "granted") {
@@ -427,13 +428,16 @@ function startConversationFlow() {
     chatInput.placeholder = "메뉴를 선택하거나 편하게 질문해주세요!";
     micBtn.classList.remove('hidden');
     
-    addBotMessage("안녕하세요! 여러분의 학습 친구 AI 튜터입니다.<br><br>오늘은 어떤 방식으로 영어를 연습해 볼까요?", [
+    const initMsg = "Hello! I'm your AI Tutor. How would you like to practice English today?";
+    const initTrans = "안녕하세요! 여러분의 학습 친구 AI 튜터입니다.<br><br>오늘은 어떤 방식으로 영어를 연습해 볼까요?";
+    
+    addBotMessage(initMsg, [
         "오늘의 일기쓰기",
         "고민상담",
         "밸런스게임",
         "스몰톡",
         "롤플레잉"
-    ], null, null, false);
+    ], null, null, false, initTrans);
 }
 
 const ROLEPLAY_PLACES = [
@@ -448,19 +452,26 @@ const ROLEPLAY_PLACES = [
 window.handleOptionClick = function(choice) {
     addUserMessage(choice, false);
     
-    if (currentState === CHAT_STATES.SELECT_CATEGORY) {
+    const isCategory = ["오늘의 일기쓰기", "고민상담", "밸런스게임", "스몰톡", "롤플레잉"].includes(choice);
+    
+    if (isCategory) {
         currentCategory = choice;
         currentState = CHAT_STATES.SELECT_METHOD;
         
-        let confirmMsg = `좋아요! <b>${currentCategory}</b> 테마로 대화를 시작할게요.<br>대화할 때 음성과 타자 중 어떤 방식을 사용하시겠어요?`;
+        // Reset timers if they are running from a previous active session
+        if (idleTimer) clearTimeout(idleTimer);
+        if (sessionCloseTimer) clearTimeout(sessionCloseTimer);
+        
+        let confirmMsg = `Great! Let's start a conversation with the <b>${currentCategory}</b> theme.<br>Would you like to use voice or text?`;
+        let confirmTrans = `좋아요! <b>${currentCategory}</b> 테마로 새롭게 대화를 시작할게요.<br>음성과 타자 중 어떤 방식을 사용하시겠어요?`;
         setTimeout(() => {
             addBotMessage(confirmMsg, [
                 "Voice (음성)",
                 "Text (타자)"
-            ], null, null, false);
+            ], null, null, false, confirmTrans);
         }, 500);
         
-    } else if (currentState === CHAT_STATES.SELECT_METHOD) {
+    } else if (currentState === CHAT_STATES.SELECT_METHOD || choice.includes("Voice") || choice.includes("Text")) {
         currentState = CHAT_STATES.CHAT_ACTIVE;
         
         // Enable inputs for active chat
@@ -531,7 +542,7 @@ async function handleUserInput() {
         let response = "";
         let botTranslation = "";
 
-        // User requested global mock logic for "i am go school"
+        // User requested global mock logic for "i am go school" and "copy -> coffee"
         if (userTextLower.includes("i am go school") || userTextLower.includes("i am go to school")) {
             correction = {
                 wrongWord: text,
@@ -541,6 +552,18 @@ async function handleUserInput() {
             };
             response = "That's great! Have a good day at school!";
             botTranslation = "잘됐네요! 학교에서 좋은 하루 보내세요!";
+        } else if (userTextLower.includes("copy") || userTextLower.includes("카피")) {
+            pronunciation = {
+                wrongSound: "Copy (카피)",
+                rightSound: "Coffee (커피) - [kɔːfi]",
+                audioFile: "커피_발음.m4a",
+                examples: [
+                    { text: "Can I get a cup of coffee?", audioFile: "커피_예문1.m4a" },
+                    { text: "I need some coffee to wake up.", audioFile: "커피_예문2.m4a" }
+                ]
+            };
+            response = "Oh, you meant coffee! Sure, what kind of coffee do you want?";
+            botTranslation = "아, 커피 말씀이시군요! 그럼요, 어떤 종류의 커피를 원하시나요?";
         } else {
             // Category-specific mock responses
 
