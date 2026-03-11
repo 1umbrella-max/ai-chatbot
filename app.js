@@ -2,6 +2,7 @@
 const CHAT_STATES = {
     INIT: 'INIT',
     SELECT_CATEGORY: 'SELECT_CATEGORY',
+    SELECT_METHOD: 'SELECT_METHOD',
     CHAT_ACTIVE: 'CHAT_ACTIVE'
 };
 
@@ -81,6 +82,13 @@ function addBotMessage(text, options = null, correction = null, pronunciation = 
     chatContainer.insertAdjacentHTML('beforeend', typingHTML);
     scrollToBottom();
 
+// Helper: Add Bot Message
+function addBotMessage(text, options = null, correction = null, pronunciation = null, saveHistory = true, translation = null) {
+    if (saveHistory) {
+        // chatHistory.push({ role: 'assistant', content: text });
+    }
+
+    // Artificial delay for realism
     setTimeout(() => {
         // Remove typing indicator
         const indicator = document.getElementById('typing-indicator');
@@ -137,7 +145,15 @@ function addBotMessage(text, options = null, correction = null, pronunciation = 
                 <div class="avatar"><i class="fa-solid fa-robot"></i></div>
                 <div class="msg-content">
                     <div class="bubble">
-                        ${text}
+                        <div class="text-content">${text}</div>
+                        ${translation ? `
+                        <div class="translation-block">
+                            <button class="translate-toggle-btn" onclick="toggleTranslation(this)">
+                                <i class="fa-solid fa-language"></i> 해석하기
+                            </button>
+                            <div class="translation-text hidden">${translation}</div>
+                        </div>
+                        ` : ''}
                         <button class="msg-audio-btn" onclick="playAudio('서초동.m4a', this)" title="Listen to message"><i class="fa-solid fa-volume-high"></i></button>
                         ${extraHTML}
                     </div>
@@ -197,13 +213,26 @@ window.playAudio = function(audioSrc, btnElement) {
     };
 };
 
+window.toggleTranslation = function(btn) {
+    const transDiv = btn.nextElementSibling;
+    if (transDiv.classList.contains('hidden')) {
+        transDiv.classList.remove('hidden');
+        btn.innerHTML = '<i class="fa-solid fa-language"></i> 원문 보기';
+        btn.classList.add('active');
+    } else {
+        transDiv.classList.add('hidden');
+        btn.innerHTML = '<i class="fa-solid fa-language"></i> 해석하기';
+        btn.classList.remove('active');
+    }
+};
+
 // Helper: Handle Idle Timeout & Auto Close
 function resetTimers() {
     if (idleTimer) clearTimeout(idleTimer);
     if (sessionCloseTimer) clearTimeout(sessionCloseTimer);
 
     // Only set timer if we are actively in a roleplay session
-    if (currentState === CHAT_STATES.ROLEPLAY_TEXT || currentState === CHAT_STATES.ROLEPLAY_VOICE) {
+    if (currentState === CHAT_STATES.CHAT_ACTIVE) {
         
         // 5-minute notification
         idleTimer = setTimeout(() => {
@@ -412,8 +441,11 @@ function startConversationFlow() {
     chatHistory = []; // Reset history
     currentState = CHAT_STATES.SELECT_CATEGORY;
     currentCategory = null;
-    chatInput.disabled = true;
-    micBtn.classList.add('hidden');
+    
+    // Enable inputs by default so user can just start chatting without picking a menu
+    chatInput.disabled = false;
+    chatInput.placeholder = "메뉴를 선택하거나 편하게 질문해주세요!";
+    micBtn.classList.remove('hidden');
     
     addBotMessage("안녕하세요! 여러분의 학습 친구 AI 튜터입니다.<br><br>오늘은 어떤 방식으로 영어를 연습해 볼까요?", [
         "오늘의 일기쓰기",
@@ -438,36 +470,59 @@ window.handleOptionClick = function(choice) {
     
     if (currentState === CHAT_STATES.SELECT_CATEGORY) {
         currentCategory = choice;
+        currentState = CHAT_STATES.SELECT_METHOD;
+        
+        let confirmMsg = `좋아요! <b>${currentCategory}</b> 테마로 대화를 시작할게요.<br>대화할 때 음성과 타자 중 어떤 방식을 사용하시겠어요?`;
+        setTimeout(() => {
+            addBotMessage(confirmMsg, [
+                "Voice (음성)",
+                "Text (타자)"
+            ], null, null, false);
+        }, 500);
+        
+    } else if (currentState === CHAT_STATES.SELECT_METHOD) {
         currentState = CHAT_STATES.CHAT_ACTIVE;
         
         // Enable inputs for active chat
         chatInput.disabled = false;
-        micBtn.classList.remove('hidden'); // allow voice mode in all for now
-        chatInput.placeholder = "Type or use voice in English...";
+        
+        if (choice.includes("Voice")) {
+            micBtn.classList.remove('hidden');
+            chatInput.placeholder = "Click the mic or type in English...";
+        } else {
+            micBtn.classList.add('hidden');
+            chatInput.placeholder = "Type your sentence in English...";
+        }
         
         let initialBotPrompt = "";
+        let initialTrans = "";
         
-        switch (choice) {
+        switch (currentCategory) {
             case "오늘의 일기쓰기":
-                initialBotPrompt = "오늘 너의 하루는 어땠어? 틀려도 괜찮아 오늘의 하루를 들려줘. 틀린 게 있다면 내가 고쳐줄게.";
+                initialBotPrompt = "What was your day like today? Tell me everything. It's okay if you make mistakes, I will gently correct them.";
+                initialTrans = "오늘 너의 하루는 어땠어? 틀려도 괜찮아 오늘의 하루를 들려줘. 틀린 게 있다면 내가 고쳐줄게.";
                 break;
             case "고민상담":
-                initialBotPrompt = "너의 모든 것을 말해줘. 저장되지 않아서 편하게 말해도 돼. 하지만 영어로 말해야 한다는 규칙이 있어!";
+                initialBotPrompt = "Tell me everything on your mind. Everything is kept secret so feel free to speak. But remember the rule, you have to speak in English!";
+                initialTrans = "너의 모든 것을 말해줘. 저장되지 않아서 편하게 말해도 돼. 하지만 영어로 말해야 한다는 규칙이 있어!";
                 break;
             case "밸런스게임":
                 initialBotPrompt = "Balance Game Time! Which one do you prefer: Brushing teeth with mint choco OR Eating toothpaste?";
+                initialTrans = "밸런스 게임 시간이에요! 둘 중 무엇을 선호하시나요: 양치질 할 때 민초맛 치약 쓰기 vs 양치를 치약 먹기로 대신하기?";
                 break;
             case "스몰톡":
                 initialBotPrompt = "Hello! What kind of drinks do you like? Energy drinks are really trendy these days!";
+                initialTrans = "안녕하세요! 어떤 종류의 음료를 좋아하시나요? 요즘은 에너지 드링크가 아주 유행이더라구요!";
                 break;
             case "롤플레잉":
                 const randomPlace = ROLEPLAY_PLACES[Math.floor(Math.random() * ROLEPLAY_PLACES.length)];
                 initialBotPrompt = randomPlace.prompt;
+                initialTrans = `우리는 지금 ${randomPlace.ko}에 있어요. 여기서 무엇을 할까요?`;
                 break;
         }
         
         setTimeout(() => {
-            addBotMessage(initialBotPrompt, null, null, null, true);
+            addBotMessage(initialBotPrompt, null, null, null, true, initialTrans);
             resetTimers(); // Start session timers
         }, 500);
     }
@@ -482,12 +537,32 @@ async function handleUserInput() {
     sendBtn.classList.remove('active');
     sendBtn.disabled = true;
 
+    const userTextLower = text.toLowerCase();
+    
+    // If user starts typing without selecting a category, move state to active
+    if (currentState === CHAT_STATES.SELECT_CATEGORY || currentState === CHAT_STATES.INIT) {
+        currentState = CHAT_STATES.CHAT_ACTIVE;
+        currentCategory = "자유대화";
+    }
+
     if (currentState === CHAT_STATES.CHAT_ACTIVE) {
-        const userTextLower = text.toLowerCase();
-        
         let correction = null;
         let pronunciation = null; // Leaving pronunciation stub for future voice features
         let response = "";
+        let botTranslation = "";
+
+        // User requested global mock logic for "i am go school"
+        if (userTextLower.includes("i am go school") || userTextLower.includes("i am go to school")) {
+            correction = {
+                wrongWord: text,
+                rightWord: "I go to school.",
+                fullSentence: "I go to school.",
+                reason: "'go'는 동사이고 'am'도 be동사입니다. 일반동사와 be동사는 같이 쓸 수 없습니다. 장소 앞에는 전치사 'to'가 필요합니다."
+            };
+            response = "That's great! Have a good day at school!";
+            botTranslation = "잘됐네요! 학교에서 좋은 하루 보내세요!";
+        } else {
+            // Category-specific mock responses
 
         // Category-specific mock responses
         switch(currentCategory) {
@@ -500,35 +575,44 @@ async function handleUserInput() {
                         reason: "단순히 'sad' 나 'late'를 나열하기보다, 'bummed out' (매우 실망한), 'upset me' (날 속상하게 했다) 같은 감정 표현과 'I swear' (맹세코 ~하다) 같은 생생한 원어민 어휘를 쓰면 훨씬 자연스럽습니다."
                     };
                     response = "You had a tough day! What did you do after that happened?";
+                    botTranslation = "힘든 하루를 보냈군요! 그 일이 있고 나서 무엇을 했나요?";
                 } else {
                     response = "I see. How did that make you feel?";
+                    botTranslation = "그렇군요. 그래서 기분이 어땠나요?";
                 }
                 break;
                 
             case "고민상담":
                 response = "I can completely understand why you feel that way. It's totally valid. What makes you worry about it the most?";
+                botTranslation = "당신이 왜 그렇게 느끼는지 완전히 이해해요. 충분히 그럴 수 있어요. 무엇이 당신을 가장 걱정하게 만드나요?";
                 break;
                 
             case "밸런스게임":
                 response = "Oh, really? Why did you choose that? Tell me the reason in detail!";
+                botTranslation = "오, 정말요? 왜 그걸 선택했나요? 이유를 자세히 말해주세요!";
                 break;
                 
             case "스몰톡":
                 response = "That's very interesting! I agree with you. What do you think is the best part about it?";
+                botTranslation = "아주 흥미롭네요! 저도 동의합니다. 그것의 가장 좋은 점이 무엇이라고 생각하시나요?";
                 break;
                 
             case "롤플레잉":
                 if (userTextLower.includes("play") || userTextLower.includes("game")) {
                     response = "Sounds fun! I haven't played that one before. Can you teach me how to play?";
+                    botTranslation = "재미있겠네요! 저는 그거 한 번도 안 해봤는데 룰 좀 가르쳐 주실래요?";
                 } else if (userTextLower.includes("buy") || userTextLower.includes("shop")) {
                     response = "Great choice. Should we look for a discount or just buy it right away?";
+                    botTranslation = "훌륭한 선택이네요. 우리 할인을 찾아볼까요, 아니면 당장 살까요?";
                 } else {
                     response = "Wow! Let's do that. What should we do next?";
+                    botTranslation = "와! 그렇게 해봐요. 그럼 우리 다음엔 뭘 할까요?";
                 }
                 break;
-        }
+        } // End of switch
+        } // End of else block for mock check
 
-        addBotMessage(response, null, correction, pronunciation, true);
+        addBotMessage(response, null, correction, pronunciation, true, botTranslation);
         resetTimers(); // Reset timer after user interaction and bot response
         
         // If the user says "bye", "quit", or "대화종료", trigger manual endSession
