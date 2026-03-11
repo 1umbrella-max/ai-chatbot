@@ -63,26 +63,6 @@ function getCurrentTime() {
 }
 
 // Helper: Add Bot Message
-function addBotMessage(text, options = null, correction = null, pronunciation = null, saveHistory = true) {
-    if (saveHistory) {
-        // chatHistory.push({ role: 'assistant', content: text });
-    }
-
-    // Show typing indicator
-    const typingHTML = `
-        <div class="message bot typing-msg" id="typing-indicator">
-            <div class="avatar"><i class="fa-solid fa-robot"></i></div>
-            <div class="typing-indicator">
-                <div class="dot"></div>
-                <div class="dot"></div>
-                <div class="dot"></div>
-            </div>
-        </div>
-    `;
-    chatContainer.insertAdjacentHTML('beforeend', typingHTML);
-    scrollToBottom();
-
-// Helper: Add Bot Message
 function addBotMessage(text, options = null, correction = null, pronunciation = null, saveHistory = true, translation = null) {
     if (saveHistory) {
         // chatHistory.push({ role: 'assistant', content: text });
